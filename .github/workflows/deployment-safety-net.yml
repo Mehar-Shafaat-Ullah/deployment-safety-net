@@ -11,15 +11,15 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
       - name: Get PR diff
         id: get_diff
         run: |
-          # Fetch the base branch (main)
-          git fetch --depth=2 origin ${{ github.event.pull_request.base.ref }}
-          # Compare PR branch against the base branch
-          git diff origin/${{ github.event.pull_request.base.ref }} > pr.diff || echo "No diff found" > pr.diff
+          git fetch origin ${{ github.event.pull_request.base.ref }}
+          git fetch origin ${{ github.event.pull_request.head.ref }}
+          git diff origin/${{ github.event.pull_request.base.ref }} origin/${{ github.event.pull_request.head.ref }} > pr.diff || echo "No diff found" > pr.diff
           cat pr.diff
+
+
 
       - name: Call Safety Net API
         id: safety_net
