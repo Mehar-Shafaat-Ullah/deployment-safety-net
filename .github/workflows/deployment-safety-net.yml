@@ -1,0 +1,37 @@
+name: Deployment Safety Net
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  check-pr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Get PR diff
+        id: get_diff
+        run: |
+          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+          git diff origin/main > pr.diff
+          cat pr.diff
+
+      - name: Call Safety Net API
+        id: safety_net
+        run: |
+          RESPONSE=$(curl -s -X POST https://cdbcfb86-1ce1-4e1d-b72f-1907840f7fc4-00-yjx8evs41s7g.riker.replit.dev/check \
+            -H "Content-Type: application/json" \
+            -d "{\"diff\": \"$(cat pr.diff | sed 's/\"/\\\\"/g' | tr '\n' ' ')\"}")
+          echo "API Response: $RESPONSE"
+          echo "::set-output name=response::$RESPONSE"
+
+      - name: Comment on PR if risky
+        uses: marocchino/sticky-pull-request-comment@v2
+        if: contains(steps.safety_net.outputs.response, 'risky')
+        with:
+          message: |
+            ⚠️ Deployment Safety Net Warning: Risky code detected in this PR!
+            Details: ${{ steps.safety_net.outputs.response }}
