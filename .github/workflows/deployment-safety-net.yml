@@ -15,8 +15,10 @@ jobs:
       - name: Get PR diff
         id: get_diff
         run: |
-          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
-          git diff origin/main > pr.diff
+          # Fetch the base branch (main)
+          git fetch --depth=2 origin ${{ github.event.pull_request.base.ref }}
+          # Compare PR branch against the base branch
+          git diff origin/${{ github.event.pull_request.base.ref }} > pr.diff || echo "No diff found" > pr.diff
           cat pr.diff
 
       - name: Call Safety Net API
@@ -26,7 +28,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d "{\"diff\": \"$(cat pr.diff | sed 's/\"/\\\\"/g' | tr '\n' ' ')\"}")
           echo "API Response: $RESPONSE"
-          echo "::set-output name=response::$RESPONSE"
+          echo "response=$RESPONSE" >> $GITHUB_OUTPUT
 
       - name: Comment on PR if risky
         uses: marocchino/sticky-pull-request-comment@v2
